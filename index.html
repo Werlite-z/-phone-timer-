@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="时间管家">
+<meta name="theme-color" content="#FFF7EE">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>手机时间小管家</title>
+<style>
+/* ============ 基础 ============ */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  color:#4C4238;
+  background:linear-gradient(168deg,#FFF8F0 0%,#FDF8F4 42%,#EDF3FF 100%);
+  background-attachment:fixed;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+.hidden{display:none !important}
+.app{max-width:480px;margin:0 auto;padding:18px 16px 70px}
+
+/* ============ 头部 ============ */
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.brand{display:flex;align-items:center;gap:11px}
+.logo{width:44px;height:44px;border-radius:15px;background:linear-gradient(135deg,#FFDCA8,#FFB877);
+  display:flex;align-items:center;justify-content:center;font-size:23px;
+  box-shadow:0 5px 14px rgba(255,168,96,.38)}
+.brand h1{font-size:18px;margin:0;font-weight:800;letter-spacing:.5px}
+.brand p{margin:3px 0 0;font-size:12px;color:#A2968A}
+.icon-btn{width:38px;height:38px;border-radius:13px;border:none;background:#fff;
+  box-shadow:0 3px 10px rgba(160,140,120,.16);font-size:17px;color:#8B7E70;
+  display:flex;align-items:center;justify-content:center}
+
+/* ============ 卡片 ============ */
+.card{background:#fff;border-radius:22px;padding:18px;
+  box-shadow:0 6px 22px rgba(176,156,132,.14);margin-bottom:14px}
+.card-title{font-size:15px;font-weight:700;margin:0 0 12px;display:flex;align-items:center;gap:7px}
+.card-title .n{width:21px;height:21px;border-radius:50%;background:#FFF0DC;color:#E39A4B;
+  font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:800}
+.card-title .sp{margin-left:auto;font-size:12px;font-weight:600;color:#B3A79A}
+.hint{font-size:12px;color:#A2968A;line-height:1.7;margin:10px 0 0}
+
+/* ============ 主按钮 ============ */
+.btn{border:none;border-radius:16px;font-size:16px;font-weight:700;transition:.15s;
+  display:flex;align-items:center;justify-content:center;gap:6px}
+.btn:active{transform:scale(.97)}
+.btn.big{width:100%;height:54px;font-size:17px}
+.btn.primary{background:linear-gradient(135deg,#FFC98A,#FFA85E);color:#fff;
+  box-shadow:0 6px 16px rgba(255,168,94,.36)}
+.btn:disabled{opacity:.45;box-shadow:none}
+
+/* ============ 大倒计时 ============ */
+.timer-card{text-align:center;padding:22px 18px 20px}
+.timer-label{font-size:13px;color:#A2968A;letter-spacing:1px;margin-bottom:4px}
+.digits{font-family:"DIN Alternate","Bahnschrift",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  font-size:58px;line-height:1.08;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:1px}
+.digits.play{color:#FF5F6D}
+.digits.low{color:#FF9F43}
+.digits.over{color:#E23B3B}
+.sub-line{font-size:12.5px;color:#A2968A;margin-top:6px;min-height:18px}
+.sub-line.warn{color:#E23B3B;font-weight:600}
+.sub-line.info{color:#7C63C4;font-weight:600}
+
+/* ============ 双额度进度条 ============ */
+.quota{margin-top:16px;text-align:left}
+.quota-head{display:flex;align-items:baseline;gap:6px;font-size:12.5px;color:#7A6F64;font-weight:700}
+.quota-head .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.quota-head .r{margin-left:auto;font-weight:600;color:#A2968A;font-size:11.5px}
+.bar{height:10px;border-radius:6px;background:#F3EEE8;overflow:hidden;margin-top:7px}
+.bar > i{display:block;height:100%;border-radius:6px;width:0;transition:width .3s linear}
+.bar.daily > i{background:linear-gradient(90deg,#FFB36B,#FF6B6B)}
+.bar.extra > i{background:linear-gradient(90deg,#CDBCF5,#8B6BD9)}
+.bar-tail{display:flex;justify-content:space-between;font-size:11px;color:#B3A79A;margin-top:5px}
+
+/* 今日时长明细 */
+.detail{margin-top:16px;background:#FBF8F4;border-radius:14px;padding:11px 13px;
+  font-size:12.5px;color:#7A6F64;line-height:1.8;text-align:left}
+.detail b{color:#D9803A}
+.detail .m{color:#C9494C}
+.detail .p{color:#4FB87E}
+
+/* ============ 管理按钮 ============ */
+.manage{margin-top:14px}
+.manage .btn{width:100%;height:52px;font-size:15px;border:2px solid #EFE8E0;background:#FDFBF8;color:#8B7E70}
+.manage .btn.hw-on{background:linear-gradient(135deg,#DDF3E4,#C5ECD2);color:#3E8C5F;border-color:#B8E3C6}
+.manage2{display:flex;gap:9px;margin-top:9px}
+.manage2 .btn{flex:1;height:50px;font-size:15px}
+.btn.checkin{background:linear-gradient(135deg,#7ED0A1,#4FB87E);color:#fff;box-shadow:0 4px 12px rgba(79,184,126,.3)}
+.btn.violate{background:#FFF4F4;color:#D2544F;border:2px solid #F2CFCF}
+.btn.violate-on{background:#FBE4E4;color:#B94B47;border-color:#E7B8B8}
+
+/* ============ 操作按钮 ============ */
+.ops{display:flex;gap:9px;margin-top:14px}
+.ops .btn{flex:1;height:52px;font-size:15px}
+.btn.start{background:#FF7A85;color:#fff;box-shadow:0 5px 14px rgba(255,110,125,.32)}
+.btn.pause{background:#F2ECE4;color:#7A6F64}
+.btn.end{background:#fff;border:2px solid #F0E9E0;color:#8B7E70}
+
+/* ============ 提示条 ============ */
+.banner{border-radius:16px;padding:12px 14px;font-size:13px;line-height:1.6;display:flex;gap:9px;align-items:flex-start}
+.banner.red{background:#FFF0F0;color:#C9494C}
+.banner.orange{background:#FFF5E6;color:#B07A2E}
+.banner.green{background:#EDF8F0;color:#3E8C5F}
+.banner .bi{font-size:16px;line-height:1.3;flex-shrink:0}
+.banner .x{margin-left:auto;background:none;border:none;color:inherit;opacity:.45;
+  font-size:15px;padding:0 2px;flex-shrink:0}
+
+/* ============ 不可玩日 ============ */
+.off-card{text-align:center;padding:30px 18px}
+.off-card .big{font-size:44px;line-height:1}
+.off-card h3{margin:12px 0 4px;font-size:18px;font-weight:800;color:#3E362E}
+
+/* ============ 三天打卡 ============ */
+.week-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+.wcell{background:#FBF8F4;border-radius:16px;padding:16px 6px;text-align:center;
+  border:2px solid transparent;transition:.2s}
+.wcell .wd{font-size:13px;color:#A79B8F;font-weight:700}
+.wcell .dn{font-size:12px;color:#BCB1A4;margin:4px 0 6px}
+.wcell .ic{font-size:22px;font-weight:800;color:#CFC4B7;line-height:1}
+.wcell .st{font-size:11px;color:#B3A79A;margin-top:6px}
+.wcell.ok{background:#EDF8F0;border-color:#C8E9D3}
+.wcell.ok .ic{color:#3E8C5F}
+.wcell.ok .st{color:#3E8C5F}
+.wcell.bad{background:#FFF0F0;border-color:#F7CFCF}
+.wcell.bad .ic{color:#D2544F}
+.wcell.bad .st{color:#D2544F}
+.wcell.today{box-shadow:0 0 0 2px #FFD9A8 inset}
+.week-note{font-size:12px;color:#A2968A;margin-top:12px;line-height:1.8}
+
+/* ============ 奖励 ============ */
+.reward{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#FFF6E6,#FFF1F6);
+  border-radius:18px;padding:14px}
+.reward .ri{font-size:28px;flex-shrink:0}
+.reward .rt{flex:1}
+.reward .rt b{display:block;font-size:14px;color:#7A5A2E}
+.reward .rt span{font-size:11.5px;color:#B09871;line-height:1.6;display:block;margin-top:3px}
+
+/* ============ 弹窗 ============ */
+.mask{position:fixed;inset:0;background:rgba(60,48,38,.45);backdrop-filter:blur(3px);
+  display:flex;align-items:center;justify-content:center;padding:24px;z-index:99;animation:fade .2s}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.modal{background:#fff;border-radius:26px;padding:26px 22px 20px;max-width:340px;width:100%;
+  text-align:center;box-shadow:0 18px 50px rgba(70,55,40,.28);animation:pop .26s cubic-bezier(.2,1.2,.4,1);
+  max-height:86vh;overflow-y:auto}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.modal .me{font-size:46px;line-height:1}
+.modal h3{margin:12px 0 10px;font-size:19px;font-weight:800;color:#3E362E}
+.modal p{margin:0;font-size:14px;color:#7A6F64;line-height:1.8;text-align:left}
+.modal p.center{text-align:center}
+.modal p b{color:#D9803A}
+.modal .steps{background:#FBF8F4;border-radius:14px;padding:12px 14px;margin-top:10px;font-size:13px}
+.modal .tip{font-size:11.5px;color:#A79B8F;display:block;margin-top:10px;line-height:1.7}
+.modal-btns{margin-top:20px;display:flex;gap:9px;flex-wrap:wrap}
+.modal-btns .btn{flex:1;min-width:100px;height:46px;font-size:15px}
+.btn.warm{background:linear-gradient(135deg,#FFC98A,#FFA85E);color:#fff;box-shadow:0 5px 14px rgba(255,168,94,.34)}
+.btn.calm{background:#EAF3FE;color:#2F6FB5}
+.btn.plain{background:#F2ECE4;color:#7A6F64}
+.btn.alert{background:#FF6B6B;color:#fff}
+.btn.gogo{background:linear-gradient(135deg,#7ED0A1,#4FB87E);color:#fff;box-shadow:0 5px 14px rgba(79,184,126,.34)}
+.btn.violet{background:linear-gradient(135deg,#C9B6F0,#8B6BD9);color:#fff;box-shadow:0 5px 14px rgba(139,107,217,.34)}
+
+/* ============ 抽屉 ============ */
+.sheet-mask{position:fixed;inset:0;background:rgba(60,48,38,.42);z-index:110;
+  opacity:0;pointer-events:none;transition:.28s}
+.sheet-mask.open{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:480px;
+  background:#fff;border-radius:26px 26px 0 0;z-index:120;
+  transform:translateY(102%);transition:transform .3s cubic-bezier(.25,.9,.3,1);
+  max-height:88vh;display:flex;flex-direction:column;box-shadow:0 -8px 30px rgba(70,55,40,.2)}
+.sheet.open{transform:translateY(0)}
+.sheet-head{display:flex;align-items:center;padding:18px 18px 10px}
+.sheet-head b{font-size:17px;font-weight:800}
+.sheet-head .x{margin-left:auto;width:32px;height:32px;border:none;border-radius:10px;
+  background:#F4EFE8;color:#8B7E70;font-size:15px;display:flex;align-items:center;justify-content:center}
+.sheet-body{overflow-y:auto;padding:0 18px 10px;-webkit-overflow-scrolling:touch}
+.sheet-foot{display:flex;gap:10px;padding:12px 18px calc(16px + env(safe-area-inset-bottom));
+  border-top:1px solid #F4EFE8}
+.sheet-foot .btn{flex:1;height:48px;font-size:15px}
+.grp{font-size:11.5px;color:#BCAF9F;font-weight:800;letter-spacing:.6px;padding:16px 0 2px}
+.fld{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #F6F2EC}
+.fld .lb{font-size:14px;color:#5A5048;flex-shrink:0}
+.fld .in{margin-left:auto;display:flex;align-items:center;gap:7px;flex-shrink:0}
+.fld input{width:64px;height:40px;border:2px solid #EFE8E0;border-radius:12px;text-align:center;
+  font-size:16px;font-weight:800;color:#4C4238;outline:none;background:#FDFBF8;
+  font-variant-numeric:tabular-nums}
+.fld input:focus{border-color:#FFB877;background:#fff}
+.fld .u{font-size:11.5px;color:#A79B8F;white-space:nowrap}
+.sheet-note{font-size:11.5px;color:#A79B8F;line-height:1.75;padding:14px 0 4px}
+
+/* 额外时间面板 */
+.bank-hero{background:linear-gradient(135deg,#F3EDFE,#EFE9FB);border-radius:20px;
+  padding:18px;text-align:center;margin:6px 0 4px}
+.bank-hero .num{font-size:46px;font-weight:800;color:#7C63C4;line-height:1;font-variant-numeric:tabular-nums}
+.bank-hero .unit{font-size:13px;color:#9C8AD0;margin-top:6px}
+.bank-hero .meta{font-size:11.5px;color:#A79B8F;margin-top:10px}
+.quick{display:flex;gap:8px;margin-top:14px}
+.quick .btn{flex:1;height:44px;font-size:14px;background:#F4EFE8;color:#6E6357}
+.quick .btn.minus{background:#F7EEEE;color:#C9736E}
+.addrow{display:flex;gap:8px;align-items:center;margin-top:12px}
+.addrow input{flex:1;height:46px;border:2px solid #EFE8E0;border-radius:14px;text-align:center;
+  font-size:17px;font-weight:800;color:#4C4238;outline:none;background:#FDFBF8;font-variant-numeric:tabular-nums}
+.addrow input:focus{border-color:#B9A2F0;background:#fff}
+.addrow .btn{width:76px;height:46px;font-size:14px;flex-shrink:0}
+.logrow{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #F6F2EC;font-size:12.5px}
+.logrow .lt{color:#B3A79A;font-size:11.5px;width:66px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.logrow .ln{flex:1;color:#6E6357}
+.logrow .lv{font-weight:800;font-variant-numeric:tabular-nums}
+.logrow .lv.p{color:#4FB87E}
+.logrow .lv.n{color:#D2544F}
+
+/* ============ Toast ============ */
+#toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(20px);
+  background:rgba(58,46,38,.92);color:#fff;padding:11px 20px;border-radius:22px;font-size:14px;
+  opacity:0;transition:.28s;pointer-events:none;z-index:200;max-width:86%;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ============ 底部说明 ============ */
+details.rules{background:#fff;border-radius:20px;padding:15px 17px;
+  box-shadow:0 6px 22px rgba(176,156,132,.14);margin-bottom:14px}
+details.rules summary{font-size:14px;font-weight:700;color:#7A6F64;outline:none;cursor:pointer}
+details.rules .body{font-size:12.5px;color:#8B8073;line-height:1.95;margin-top:10px}
+details.rules .body b{color:#5A5048}
+details.rules .body hr{border:none;border-top:1px dashed #EEE7DE;margin:10px 0}
+
+/* ============ 历史记录 ============ */
+.hist-sum{display:flex;gap:8px;margin-bottom:12px}
+.hist-sum .hs{flex:1;background:#FBF8F4;border-radius:12px;padding:9px 4px;text-align:center}
+.hist-sum .hs b{display:block;font-size:15px;font-weight:800;color:#5A5048;font-variant-numeric:tabular-nums}
+.hist-sum .hs span{font-size:10.5px;color:#A79B8F;line-height:1.3}
+.hist-list{max-height:380px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.hrow{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid #F6F2EC}
+.hrow:last-child{border-bottom:none}
+.hrow .hd{width:96px;flex-shrink:0}
+.hrow .hd b{display:block;font-size:13px;color:#5A5048}
+.hrow .hd span{font-size:10.5px;color:#BCB1A4}
+.hrow .hm{flex:1;font-size:13px;color:#6E6357;line-height:1.5}
+.hrow .hm b{color:#5A5048}
+.hrow .hm small{color:#9C8AD0;font-size:11px}
+.hrow .hi{font-size:17px;font-weight:800;width:26px;text-align:center;flex-shrink:0}
+.hrow .hi.ok{color:#3E8C5F}
+.hrow .hi.bad{color:#D2544F}
+.hrow .hi.none{color:#CFC4B7}
+.hist-empty{text-align:center;color:#BCB1A4;font-size:12.5px;padding:22px 0}
+
+.foot{text-align:center;font-size:11px;color:#BCB1A4;padding-bottom:10px;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="brand">
+      <div class="logo">⏳</div>
+      <div>
+        <h1>手机时间小管家</h1>
+        <p id="dateLine">—</p>
+      </div>
+    </div>
+    <button class="icon-btn" id="gearBtn" title="家长设置">⚙️</button>
+  </header>
+
+  <!-- 安装引导 -->
+  <div class="banner green hidden" id="installTip" style="margin-bottom:14px">
+    <div class="bi">💡</div>
+    <div>想当 App 用？点右上 <b>⚙️ → 📱 装到手机桌面</b>，按提示添加即可，断网也能打开。</div>
+    <button class="x" id="installTipX">✕</button>
+  </div>
+
+  <!-- 惩罚扣减横幅 -->
+  <div class="banner orange hidden" id="penaltyBanner" style="margin-bottom:14px">
+    <div class="bi">⏳</div>
+    <div><b>今日时长已扣减 <span id="penaltyAmt">30</span> 分钟。</b><br>因为上个玩日记录过违约，按规则今天少玩半小时。</div>
+  </div>
+
+  <!-- 违约横幅 -->
+  <div class="banner red hidden" id="violateBanner" style="margin-bottom:14px">
+    <div class="bi">🚫</div>
+    <div><b>今天已记录违约。</b><br>按规则，下一个玩日将少玩 <span id="violateAmt">30</span> 分钟。请把手机交给爸爸妈妈。</div>
+  </div>
+
+  <!-- ============ 不可玩日 ============ -->
+  <section class="card off-card hidden" id="offCard">
+    <div class="big">🚫</div>
+    <h3>今天不是可玩日</h3>
+    <p class="hint">我们的约定是<b>只有周五、周六、周日</b>可以玩手机。<br>周一到周四好好写作业、早休息，攒足精神，周末再痛痛快快地玩～</p>
+  </section>
+
+  <!-- ============ 计时主界面（仅周五六日） ============ -->
+  <section class="card timer-card hidden" id="mainCard">
+
+    <div class="timer-label">剩余可玩手机时间</div>
+    <div class="digits play" id="playDigits">00:00</div>
+    <div class="sub-line" id="playSub">—</div>
+
+    <!-- 额度一：今日日常时长 -->
+    <div class="quota">
+      <div class="quota-head">
+        <span class="dot" style="background:#FF7A6B"></span>今日日常时长
+        <span class="r" id="dailyRight">剩余 0 / 0 分钟</span>
+      </div>
+      <div class="bar daily"><i id="dailyBar"></i></div>
+      <div class="bar-tail"><span id="dailyLeft">每天自动 60 分钟</span><span id="dailyUsed">已用 0 分钟</span></div>
+    </div>
+
+    <!-- 额度二：额外时间 -->
+    <div class="quota">
+      <div class="quota-head">
+        <span class="dot" style="background:#8B6BD9"></span>额外时间（永久储存）
+        <span class="r" id="extraRight">剩余 0 / 0 分钟</span>
+      </div>
+      <div class="bar extra"><i id="extraBar"></i></div>
+      <div class="bar-tail"><span id="extraLeft">日常时长用完后才会使用</span><span id="extraUsed">累计已用 0 分钟</span></div>
+    </div>
+
+    <!-- 今日时长明细 -->
+    <div class="detail" id="detailLine">—</div>
+
+    <!-- 管理按钮 -->
+    <div class="manage">
+      <button class="btn" id="btnHw">📚 作业已完成？点此 +90 分钟</button>
+    </div>
+    <div class="manage2">
+      <button class="btn checkin" id="btnCheckIn">✅ 今日打卡</button>
+      <button class="btn violate" id="btnViolate">⚠️ 记录违约</button>
+    </div>
+
+    <!-- 计时按钮 -->
+    <div class="ops">
+      <button class="btn start" id="btnStart">▶ 开始</button>
+      <button class="btn pause" id="btnPause">⏸ 暂停</button>
+      <button class="btn end" id="btnEnd">⏹ 结束本次</button>
+    </div>
+    <p class="hint" id="statusLine" style="text-align:center">—</p>
+  </section>
+
+  <!-- ============ 本周三天打卡 ============ -->
+  <section class="card">
+    <h2 class="card-title">📅 本周打卡（五 · 六 · 日）<span class="sp" id="weekRange"></span></h2>
+    <div class="week-grid" id="weekGrid"></div>
+    <div class="week-note" id="weekNote">—</div>
+  </section>
+
+  <!-- ============ 历史记录 ============ -->
+  <section class="card">
+    <h2 class="card-title">📊 历史记录<span class="sp">每天游玩时长</span></h2>
+    <div class="hist-sum" id="histSum"></div>
+    <div class="hist-list" id="histList"></div>
+  </section>
+
+  <!-- ============ 额外时间 ============ -->
+  <section class="card">
+    <h2 class="card-title">💰 额外时间</h2>
+    <div id="rewardBox"></div>
+  </section>
+
+  <!-- ============ 规则说明 ============ -->
+  <details class="rules">
+    <summary>📖 当前规则 &amp; 使用帮助（可在 ⚙️ 里修改）</summary>
+    <div class="body" id="rulesText"></div>
+  </details>
+
+  <div class="foot">手机时间小管家 · 约定好，就一起遵守 🤝<br>数据保存在本机浏览器，不联网、不上传</div>
+</div>
+
+<!-- 通用抽屉 -->
+<div class="sheet-mask" id="sheetMask"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-head">
+    <b id="sheetTitle">设置</b>
+    <button class="x" id="sheetClose">✕</button>
+  </div>
+  <div class="sheet-body" id="sheetBody"></div>
+  <div class="sheet-foot" id="sheetFoot"></div>
+</div>
+
+<!-- 弹窗 -->
+<div class="mask hidden" id="mask">
+  <div class="modal">
+    <div class="me" id="mEmoji">⏰</div>
+    <h3 id="mTitle"></h3>
+    <div id="mText"></div>
+    <div class="modal-btns" id="mBtns"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* =======================================================================
+   手机时间小管家 · 纯前端单文件版
+   规则：
+     ① 只有周五、周六、周日可以玩手机
+     ② 每天自动 60 分钟；家长检查完作业后手动点「作业完成」再 +90 分钟
+     ③ 手动打卡：每天守约后点「打卡」；破坏约定点「违约」
+     ④ 违约 → 下一个玩日时长 -30 分钟
+     ⑤ 周五、六、日三天全部打卡成功 → 额外时间 +60 分钟（永久储存）
+   所有数值都可在 ⚙️ → 「修改规则」里调整
+   ======================================================================= */
+var STORE_KEY = 'phoneTimeTimer.v1';
+
+/* 默认规则（家长可改） */
+var DEFAULT_RULES = {
+  baseMin: 60,        // 每天自动时长（1 小时）
+  hwBonusMin: 90,     // 作业完成增加的时长（1.5 小时）
+  penaltyMin: 30,     // 违约后下一个玩日扣减（半小时）
+  weekRewardMin: 60   // 三天全打卡，额外时间奖励（1 小时）
+};
+
+var RULE_FIELDS = [
+  { grp: '每天时长' },
+  { k: 'baseMin',      lb: '每天自动',     u: '分钟' },
+  { k: 'hwBonusMin',   lb: '作业完成增加', u: '分钟' },
+  { grp: '违约惩罚' },
+  { k: 'penaltyMin',   lb: '违约次日扣减', u: '分钟' },
+  { grp: '打卡奖励' },
+  { k: 'weekRewardMin',lb: '三天全打卡奖励', u: '分钟（存入额外时间）' }
+];
+
+var WD_NAMES = ['周日','周一','周二','周三','周四','周五','周六'];
+var LOW_MS = 5 * 60000;
+
+/* ===================== 规则读取 ===================== */
+function rule(k){ return S.rules[k]; }
+
+/* ===================== 工具函数 ===================== */
+function pad(n){ return (n < 10 ? '0' : '') + n; }
+function dateKey(d){ return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function addDays(d, n){ var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() + n); return x; }
+function mondayOf(d){ var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+function parseKey(k){ var p = k.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+/* 是否可玩日：周五(5)、周六(6)、周日(0) */
+function isPlayDay(d){ var w = d.getDay(); return w === 5 || w === 6 || w === 0; }
+/* 下一个可玩日（用于违约惩罚的「第二天」） */
+function nextPlayDayKey(d){
+  var x = addDays(d, 1), guard = 0;
+  while (!isPlayDay(x) && guard < 10) { x = addDays(x, 1); guard++; }
+  return dateKey(x);
+}
+/* 当前「玩周期」的周一（周五六日为一个周期） */
+function currentPlayMon(){
+  var now = new Date();
+  var mon = mondayOf(now);
+  var w = now.getDay();
+  if (w >= 1 && w <= 4) return addDays(mon, -7);   // 周一~周四 → 上一个玩周期
+  return mon;
+}
+
+/* 毫秒 → 时:分:秒 / 分:秒 */
+function fmtClock(ms){
+  var neg = ms < 0; ms = Math.abs(ms);
+  var s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return (neg ? '-' : '') + (h > 0 ? h + ':' + pad(m) + ':' + pad(sec) : pad(m) + ':' + pad(sec));
+}
+function fmtMin(ms){ return String(Math.round(ms / 60000 * 10) / 10); }
+function fmtDuration(ms){
+  var m = Math.round(ms / 60000);
+  if (m < 60) return m + '分';
+  var h = Math.floor(m / 60), mm = m % 60;
+  return h + '小时' + (mm ? mm + '分' : '');
+}
+function stamp(ts){
+  var d = new Date(ts);
+  return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+/* ===================== 数据存取 ===================== */
+function load(){
+  var data = { v: 3, days: {}, weeks: {}, rules: {}, tips: {}, bank: { added: 0, log: [] }, penalty: null };
+  var saved = null;
+  try {
+    var raw = localStorage.getItem(STORE_KEY);
+    if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') saved = o; }
+  } catch (e) { console.warn('读取本地数据失败', e); }
+
+  if (saved) {
+    data.tips = saved.tips || {};
+    if (saved.bank && typeof saved.bank.added === 'number') {
+      data.bank = { added: saved.bank.added, log: saved.bank.log || [] };
+    }
+    if (saved.penalty) data.penalty = saved.penalty;
+    // 旧版本（v<3）规则语义完全不同，打卡记录作废，仅保留额外时间与提示
+    if (saved.v >= 3) {
+      data.days  = saved.days  || {};
+      data.weeks = saved.weeks || {};
+    }
+  }
+  for (var k in DEFAULT_RULES) {
+    var v = saved && saved.rules ? saved.rules[k] : undefined;
+    data.rules[k] = (typeof v === 'number' && isFinite(v)) ? v : DEFAULT_RULES[k];
+  }
+  return data;
+}
+function save(){
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); }
+  catch (e) { toast('本地存储不可用，数据可能无法保存'); }
+}
+var S = load();
+
+function blankDay(k){
+  return { date: k, base: 0, hwBonus: 0, hwDone: false, penaltyMin: 0,
+           playMs: 0, sessionMs: 0, running: false, since: 0, checked: null };
+}
+/* 取今天的可玩日记录（非可玩日返回 null） */
+function todayRec(){
+  var now = new Date();
+  if (!isPlayDay(now)) return null;
+  var k = dateKey(now);
+  if (!S.days[k]) {
+    var d = blankDay(k);
+    d.base = rule('baseMin');
+    d.hwBonus = rule('hwBonusMin');
+    if (S.penalty && S.penalty.date === k) {   // 应用上一个玩日的违约惩罚
+      d.penaltyMin = S.penalty.min;
+      S.penalty = null;
+    }
+    S.days[k] = d;
+    save();
+  }
+  return S.days[k];
+}
+
+/* ===================== 额度计算 =====================
+   今日日常时长 = 每天自动 + 作业完成奖励 - 违约扣减
+   额外时间 = 永久储存罐（三天全打卡奖励 / 家长手动添加）
+   ==================================================== */
+function dailyMin(d){
+  if (!d) return 0;
+  return Math.max(0, d.base + (d.hwDone ? d.hwBonus : 0) - d.penaltyMin);
+}
+function dailyMs(d){ return dailyMin(d) * 60000; }
+function playMs(d){ return d.playMs + (d.running && d.since ? (Date.now() - d.since) : 0); }
+
+function bankUsedBy(d){
+  if (!d) return 0;
+  return Math.max(0, playMs(d) - dailyMs(d));
+}
+function bankUsedTotalMs(){
+  var sum = 0;
+  for (var k in S.days) sum += bankUsedBy(S.days[k]);
+  return sum;
+}
+function bankAddedMs(){ return Math.max(0, S.bank.added) * 60000; }
+function bankRawMs(){ return bankAddedMs() - bankUsedTotalMs(); }
+function bankRemainMs(){ return Math.max(0, bankRawMs()); }
+
+function dailyLeftMs(d){ return Math.max(0, dailyMs(d) - playMs(d)); }
+function remainMs(d){
+  if (!d) return 0;
+  return dailyLeftMs(d) + bankRawMs();
+}
+
+/* 三天（当前玩周期的五、六、日）打卡情况 */
+function threeDays(){
+  var mon = currentPlayMon();
+  return [4, 5, 6].map(function (i) { return S.days[dateKey(addDays(mon, i))]; });
+}
+function threeAllOk(){
+  return threeDays().every(function (d) { return d && d.checked === 'ok'; });
+}
+function playWeekKey(){ return 'W' + dateKey(currentPlayMon()); }
+
+/* ===================== 额外时间存取 ===================== */
+function bankAdd(min, note){
+  min = Math.round(min);
+  if (!min) { toast('请输入要添加的分钟数'); return false; }
+  var next = S.bank.added + min;
+  if (next * 60000 < bankUsedTotalMs()) {
+    toast('不能扣除：额外时间已用掉 ' + fmtMin(bankUsedTotalMs()) + ' 分钟，余额不够');
+    return false;
+  }
+  if (next < 0) { toast('额外时间不能为负数'); return false; }
+  S.bank.added = next;
+  S.bank.log.unshift({ t: Date.now(), min: min, note: note || (min > 0 ? '家长添加' : '家长扣除') });
+  if (S.bank.log.length > 50) S.bank.log.length = 50;
+  save(); return true;
+}
+
+/* ===================== 弹窗 / Toast ===================== */
+function showModal(opt){
+  document.getElementById('mEmoji').textContent = opt.emoji || '⏰';
+  document.getElementById('mTitle').textContent = opt.title || '';
+  document.getElementById('mText').innerHTML = opt.text || '';
+  var box = document.getElementById('mBtns'); box.innerHTML = '';
+  (opt.buttons || [{ t: '好的', c: 'warm' }]).forEach(function (b) {
+    var el = document.createElement('button');
+    el.className = 'btn ' + (b.c || 'warm'); el.textContent = b.t;
+    el.onclick = function () { hideModal(); if (b.fn) b.fn(); };
+    box.appendChild(el);
+  });
+  document.getElementById('mask').classList.remove('hidden');
+}
+function hideModal(){ document.getElementById('mask').classList.add('hidden'); }
+document.getElementById('mask').addEventListener('click', function (e) {
+  if (e.target === this) hideModal();
+});
+
+var toastTimer = null;
+function toast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2400);
+}
+
+/* ===================== 计时动作 ===================== */
+function startPlay(){
+  var d = todayRec();
+  if (!d) return;
+  if (remainMs(d) <= 0) { toast('今天的可用时间已经用完啦'); return; }
+  if (d.running) return;
+  d.running = true; d.since = Date.now(); save(); render();
+}
+function pausePlay(){
+  var d = todayRec();
+  if (!d || !d.running) return;
+  var el = Date.now() - d.since;
+  d.playMs += el; d.sessionMs += el; d.running = false; d.since = 0; save(); render();
+}
+function endSession(){
+  var d = todayRec();
+  if (!d) return;
+  if (d.running) pausePlay();
+  var used = d.sessionMs; d.sessionMs = 0; save();
+  render();
+  if (used < 1000) { toast('本次游玩时间太短了'); return; }
+  var left = remainMs(d), fromExtra = bankUsedBy(d);
+  showModal({
+    emoji: '🏁', title: '本次游玩结束',
+    text: '<p class="center">本次玩了 <b>' + fmtClock(used) + '</b>，<br>总共还剩 <b>'
+        + (left >= 0 ? fmtClock(left) : '超时 ' + fmtClock(-left)) + '</b>。'
+        + (fromExtra > 0 ? '<br><span style="font-size:12.5px;color:#9C8AD0">其中用了额外时间 '
+            + fmtMin(fromExtra) + ' 分钟</span>' : '') + '</p>',
+    buttons: [{ t: '知道啦', c: 'warm' }]
+  });
+}
+
+/* 作业完成（手动确认，可撤销） */
+function toggleHw(){
+  var d = todayRec();
+  if (!d) return;
+  d.hwDone = !d.hwDone;
+  save(); render();
+  toast(d.hwDone ? '已确认作业完成，+' + d.hwBonus + ' 分钟' : '已撤销，作业奖励取消');
+}
+
+/* 今日打卡（手动，守约声明） */
+function checkIn(){
+  var d = todayRec();
+  if (!d) return;
+  if (d.checked === 'ok') { toast('今天已经打过卡啦'); return; }
+  if (d.checked === 'violate') { toast('今天已记录违约，无法打卡'); return; }
+  showModal({
+    emoji: '✅', title: '确认今日打卡？',
+    text: '<p class="center">打卡表示今天<b>遵守了约定</b>（没有超时耍赖）。<br>确认后本周打卡会记为 ✓。</p>',
+    buttons: [
+      { t: '再想想', c: 'plain' },
+      { t: '确认打卡', c: 'gogo', fn: function () {
+          d.checked = 'ok'; save();
+          if (settleWeekReward()) {
+            render();
+            showModal({ emoji: '🎉', title: '三天全打卡成功！',
+              text: '<p class="center">太棒了，本周三天全部守约！<br>额外时间已 <b>+' + rule('weekRewardMin')
+                  + ' 分钟</b>，永久有效。</p>',
+              buttons: [{ t: '太棒了', c: 'warm' }] });
+          } else { render(); toast('今日打卡成功 ✓'); }
+        } }
+    ]
+  });
+}
+
+/* 记录违约（手动，惩罚下一个玩日 -30） */
+function violate(){
+  var d = todayRec();
+  if (!d) return;
+  if (d.checked === 'violate') { toast('今天已记录违约'); return; }
+  showModal({
+    emoji: '⚠️', title: '确认记录违约？',
+    text: '<p>记录后：<br>· 今天打卡记为 <b>✗</b>，本周全勤奖励作废<br>· 下一个玩日时长 <b>-' + rule('penaltyMin') + ' 分钟</b></p>',
+    buttons: [
+      { t: '取消', c: 'plain' },
+      { t: '确认违约', c: 'alert', fn: function () {
+          if (d.running) pausePlay();
+          d.checked = 'violate';
+          S.penalty = { date: nextPlayDayKey(new Date()), min: rule('penaltyMin') };
+          save(); render();
+          showModal({ emoji: '🚫', title: '已记录违约',
+            text: '<p class="center">今天记为违约 ✗。<br>下一个玩日（<b>'
+                + S.penalty.date.replace(/-/g, '/') + '</b>）将少玩 <b>' + rule('penaltyMin')
+                + ' 分钟</b>。<br>现在请把手机交给爸爸妈妈。</p>',
+            buttons: [{ t: '我知道了', c: 'alert' }] });
+        } }
+    ]
+  });
+}
+
+/* 三天全打卡 → 结算额外时间（幂等） */
+function settleWeekReward(){
+  var wk = playWeekKey();
+  if (S.weeks[wk] && S.weeks[wk].rewardUsed) return false;
+  if (!threeAllOk()) return false;
+  if (!S.weeks[wk]) S.weeks[wk] = {};
+  S.weeks[wk].rewardUsed = true;
+  bankAdd(rule('weekRewardMin'), '三天全打卡奖励');
+  save();
+  return true;
+}
+
+/* ===================== 渲染 ===================== */
+var lastLeft = null;
+var curDateKey = dateKey(new Date());
+
+function renderWeek(){
+  var mon = currentPlayMon(), ds = threeDays(), html = '', okCount = 0, hasBad = false;
+  var labels = ['周五', '周六', '周日'];
+  for (var i = 0; i < 3; i++) {
+    var dt = addDays(mon, i + 4), k = dateKey(dt), d = ds[i];
+    var cls = 'wcell', ic = '·', st = '待打卡';
+    if (d && d.checked === 'ok') { cls += ' ok'; ic = '✓'; st = '已打卡'; okCount++; }
+    else if (d && d.checked === 'violate') { cls += ' bad'; ic = '✗'; st = '违约'; hasBad = true; }
+    if (k === dateKey(new Date())) cls += ' today';
+    html += '<div class="' + cls + '" title="' + st + '">'
+          +   '<div class="wd">' + labels[i] + '</div>'
+          +   '<div class="dn">' + (dt.getMonth() + 1) + ' 月 ' + dt.getDate() + ' 日</div>'
+          +   '<div class="ic">' + ic + '</div>'
+          +   '<div class="st">' + st + '</div>'
+          + '</div>';
+  }
+  document.getElementById('weekGrid').innerHTML = html;
+  document.getElementById('weekRange').textContent =
+    (mon.getMonth() + 1) + '/' + mon.getDate() + ' – ' + (addDays(mon, 6).getMonth() + 1) + '/' + addDays(mon, 6).getDate();
+
+  var wk = playWeekKey(), rewarded = S.weeks[wk] && S.weeks[wk].rewardUsed;
+  var note = '本周三天打卡：<b style="color:#3E8C5F">' + okCount + ' / 3</b>';
+  if (rewarded) note += '　🎉 已达成，额外时间 +' + rule('weekRewardMin') + ' 分钟已到账';
+  else if (okCount === 3) note += '　🎉 三天全打卡！额外时间 +' + rule('weekRewardMin') + ' 分钟';
+  else if (hasBad) note += '　有违约记录，本周全勤奖励作废，下次加油 💪';
+  else note += '　三天都打卡成功，就能获得 +' + rule('weekRewardMin') + ' 分钟额外时间';
+  document.getElementById('weekNote').innerHTML = note;
+}
+
+function renderReward(){
+  var box = document.getElementById('rewardBox');
+  var remain = bankRemainMs(), added = bankAddedMs();
+  if (added > 0) {
+    box.innerHTML = '<div class="reward"><div class="ri">💰</div><div class="rt">'
+      + '<b>剩余 ' + fmtMin(remain) + ' 分钟</b>'
+      + '<span>累计获得 ' + fmtMin(added) + ' 分钟 · 在 ⚙️ 里可添加或扣除</span></div></div>';
+  } else {
+    box.innerHTML = '<div class="reward" style="background:#F7F5F1"><div class="ri">💰</div><div class="rt">'
+      + '<b style="color:#8B8073">额外时间还是空的</b>'
+      + '<span>三天全打卡可获得 +' + rule('weekRewardMin') + ' 分钟，也可以点右上 ⚙️ 手动添加</span></div></div>';
+  }
+}
+
+function renderHistory(){
+  var keys = Object.keys(S.days).sort().reverse();
+  var totalPlay = 0, okCount = 0, badCount = 0;
+  keys.forEach(function (k) {
+    var d = S.days[k];
+    if (!d) return;
+    totalPlay += playMs(d);
+    if (d.checked === 'ok') okCount++;
+    else if (d.checked === 'violate') badCount++;
+  });
+
+  document.getElementById('histSum').innerHTML =
+      '<div class="hs"><b>' + fmtDuration(totalPlay) + '</b><span>累计游玩</span></div>'
+    + '<div class="hs"><b style="color:#3E8C5F">' + okCount + '</b><span>打卡成功(天)</span></div>'
+    + '<div class="hs"><b style="color:#D2544F">' + badCount + '</b><span>违约(天)</span></div>';
+
+  var list = document.getElementById('histList');
+  if (!keys.length) {
+    list.innerHTML = '<div class="hist-empty">还没有游玩记录，从周五开始吧～</div>';
+    return;
+  }
+  var html = '', shown = 0;
+  keys.forEach(function (k) {
+    if (shown >= 15) return;
+    var d = S.days[k];
+    if (!d) return;
+    shown++;
+    var dt = parseKey(k);
+    var icon = d.checked === 'ok' ? '✓' : (d.checked === 'violate' ? '✗' : '·');
+    var icls = d.checked === 'ok' ? 'ok' : (d.checked === 'violate' ? 'bad' : 'none');
+    var extra = bankUsedBy(d);
+    html += '<div class="hrow">'
+      + '<div class="hd"><b>' + (dt.getMonth() + 1) + '/' + dt.getDate() + ' ' + WD_NAMES[dt.getDay()] + '</b>'
+      +   '<span>' + dt.getFullYear() + '</span></div>'
+      + '<div class="hm">已玩 <b>' + fmtMin(playMs(d)) + '</b> 分钟'
+      +   (extra > 0 ? '<br><small>含额外时间 ' + fmtMin(extra) + ' 分钟</small>' : '')
+      + '</div>'
+      + '<div class="hi ' + icls + '">' + icon + '</div>'
+      + '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function renderRulesText(){
+  var r = S.rules;
+  document.getElementById('rulesText').innerHTML =
+      '<b>一、可玩日</b><br>'
+    + '· 只有 <b>周五、周六、周日</b> 可以玩手机，周一到周四不玩'
+    + '<hr>'
+    + '<b>二、每天时长</b><br>'
+    + '· 每天自动 <b>' + r.baseMin + ' 分钟</b>（' + (r.baseMin / 60) + ' 小时）<br>'
+    + '· 家长检查完作业后，点「<b>📚 作业完成</b>」按钮，当天再 <b>+' + r.hwBonusMin + ' 分钟</b>（'
+    + (r.hwBonusMin / 60) + ' 小时）<br>'
+    + '· 日常时长当天有效，用不完的部分不会累积'
+    + '<hr>'
+    + '<b>三、手动打卡</b><br>'
+    + '· 每天守约结束后，点「<b>✅ 今日打卡</b>」记为 ✓<br>'
+    + '· 周五、六、日<b>三天都打卡成功</b> → 额外时间 <b>+' + r.weekRewardMin + ' 分钟</b>（永久储存）'
+    + '<hr>'
+    + '<b>四、违约惩罚</b><br>'
+    + '· 孩子破坏约定（超时耍赖等）时，家长点「<b>⚠️ 记录违约</b>」<br>'
+    + '· 违约后，<b>下一个可玩日</b>时长 <b>-' + r.penaltyMin + ' 分钟</b>；当天打卡记为 ✗，本周全勤奖励作废'
+    + '<hr>'
+    + '<b>五、额外时间</b><br>'
+    + '· 三天全打卡的奖励、家长手动添加的时间都存在这里<br>'
+    + '· <b>永久保存</b>，不会每天清零；今天的日常时长用完后才会开始消耗<br>'
+    + '· 在 ⚙️ →「💰 管理额外时间」里随时添加或扣除'
+    + '<hr>'
+    + '<b>六、小贴士</b><br>'
+    + '· 数据保存在本机浏览器里，<b>刷新 / 关掉页面都不会丢</b>，无需登录和联网<br>'
+    + '· 计时基于真实时间，<b>中途关掉页面也会继续计时</b>，防止偷跑<br>'
+    + '· 想修改规则、管理额外时间或把本页装成 App，点右上角 <b>⚙️</b>';
+}
+
+function renderLive(){
+  var d = todayRec();
+  if (!d) return;
+
+  var used = playMs(d), daily = dailyMs(d);
+  var dLeft = dailyLeftMs(d);
+  var eTotal = bankAddedMs(), eUsed = bankUsedTotalMs(), eLeft = bankRemainMs();
+  var fromExtra = bankUsedBy(d);
+  var total = remainMs(d);
+
+  var el = document.getElementById('playDigits');
+  el.textContent = fmtClock(total);
+  el.className = 'digits ' + (total < 0 ? 'over' : (total <= LOW_MS ? 'low' : 'play'));
+
+  document.getElementById('dailyBar').style.width = (daily > 0 ? Math.min(100, used / daily * 100) : 100) + '%';
+  document.getElementById('dailyRight').textContent = '剩余 ' + fmtMin(dLeft) + ' / ' + dailyMin(d) + ' 分钟';
+  document.getElementById('dailyLeft').textContent = '每天自动 ' + d.base + ' 分钟';
+  document.getElementById('dailyUsed').textContent = '已用 ' + fmtMin(Math.min(used, daily)) + ' 分钟';
+
+  document.getElementById('extraBar').style.width = (eTotal > 0 ? Math.min(100, eUsed / eTotal * 100) : 0) + '%';
+  document.getElementById('extraRight').textContent = '剩余 ' + fmtMin(eLeft) + ' / ' + fmtMin(eTotal) + ' 分钟';
+  document.getElementById('extraLeft').textContent = fromExtra > 0
+    ? '今天已用 ' + fmtMin(fromExtra) + ' 分钟' : '日常时长用完后才会使用';
+  document.getElementById('extraUsed').textContent = '累计已用 ' + fmtMin(eUsed) + ' 分钟';
+
+  var sub = document.getElementById('playSub');
+  if (total < 0) {
+    sub.className = 'sub-line warn';
+    sub.textContent = '⚠️ 已超时 ' + fmtClock(-total) + '，请结束游玩，家长可点「记录违约」';
+  } else if (total <= 0) {
+    sub.className = 'sub-line warn';
+    sub.textContent = '时间都用完啦，请结束本次游玩并上交手机';
+  } else if (dLeft <= 0 && eLeft > 0) {
+    sub.className = 'sub-line info';
+    sub.textContent = '今日日常时长已用完，正在使用额外时间';
+  } else {
+    sub.className = 'sub-line';
+    sub.textContent = d.running ? '计时中，玩得开心也要守时哦' : '点「开始」继续计时';
+  }
+
+  if (lastLeft !== null && lastLeft > 0 && total <= 0 && d.running) toast('今日时间已用完，请结束游玩');
+  lastLeft = total;
+
+  document.getElementById('btnStart').disabled = d.running || remainMs(d) <= 0;
+  document.getElementById('btnPause').disabled = !d.running;
+  document.getElementById('btnEnd').disabled = false;
+
+  document.getElementById('statusLine').textContent = d.running ? '正在计时中…' : '已暂停';
+}
+
+function render(){
+  var now = new Date();
+  document.getElementById('dateLine').textContent =
+    now.getFullYear() + ' / ' + (now.getMonth() + 1) + ' / ' + now.getDate() + ' · ' + WD_NAMES[now.getDay()];
+
+  var playable = isPlayDay(now);
+  document.getElementById('offCard').classList.toggle('hidden', playable);
+  document.getElementById('mainCard').classList.toggle('hidden', !playable);
+  document.getElementById('installTip').classList.toggle('hidden', S.tips.installTip === true);
+
+  var d = playable ? todayRec() : null;
+
+  /* 违约 / 惩罚横幅 */
+  var vBan = document.getElementById('violateBanner');
+  if (d && d.checked === 'violate') { vBan.classList.remove('hidden'); document.getElementById('violateAmt').textContent = rule('penaltyMin'); }
+  else vBan.classList.add('hidden');
+  var pBan = document.getElementById('penaltyBanner');
+  if (d && d.penaltyMin > 0 && d.checked !== 'violate') { pBan.classList.remove('hidden'); document.getElementById('penaltyAmt').textContent = d.penaltyMin; }
+  else pBan.classList.add('hidden');
+
+  if (playable) {
+    /* 作业完成按钮 */
+    var hw = document.getElementById('btnHw');
+    if (d.hwDone) { hw.className = 'btn hw-on'; hw.textContent = '✅ 作业已完成 +' + d.hwBonus + ' 分钟（点此撤销）'; }
+    else { hw.className = 'btn'; hw.textContent = '📚 作业已完成？点此 +' + d.hwBonus + ' 分钟'; }
+
+    /* 打卡按钮 */
+    var ci = document.getElementById('btnCheckIn');
+    if (d.checked === 'ok') { ci.disabled = true; ci.textContent = '✅ 已打卡'; }
+    else if (d.checked === 'violate') { ci.disabled = true; ci.textContent = '✅ 今日打卡'; }
+    else { ci.disabled = false; ci.textContent = '✅ 今日打卡'; }
+
+    /* 违约按钮 */
+    var vt = document.getElementById('btnViolate');
+    if (d.checked === 'violate') { vt.disabled = true; vt.className = 'btn violate-on'; vt.textContent = '❌ 已违约'; }
+    else { vt.disabled = false; vt.className = 'btn violate'; vt.textContent = '⚠️ 记录违约'; }
+
+    /* 明细 */
+    var detail = document.getElementById('detailLine');
+    var parts = ['自动 ' + d.base + ' 分钟'];
+    if (d.hwDone) parts.push('<span class="p">作业 +' + d.hwBonus + ' 分钟</span>');
+    if (d.penaltyMin > 0) parts.push('<span class="m">违约 -' + d.penaltyMin + ' 分钟</span>');
+    detail.innerHTML = '今日日常时长 = ' + parts.join(' + ') + '　=　<b>' + dailyMin(d) + ' 分钟</b>';
+
+    renderLive();
+  }
+
+  renderWeek();
+  renderHistory();
+  renderReward();
+  renderRulesText();
+}
+
+/* ===================== 定时巡检 ===================== */
+function tick(){
+  var k = dateKey(new Date());
+  if (k !== curDateKey) {
+    curDateKey = k; lastLeft = null;
+    var y = S.days[dateKey(addDays(new Date(), -1))];
+    if (y && y.running) { y.playMs += Date.now() - y.since; y.running = false; y.since = 0; save(); }
+    render();
+    if (settleWeekReward()) {
+      render();
+      showModal({ emoji: '🎉', title: '三天全打卡成功！',
+        text: '<p class="center">上周三天全部守约，<br>额外时间已 <b>+' + rule('weekRewardMin') + ' 分钟</b>。</p>',
+        buttons: [{ t: '太棒了', c: 'warm' }] });
+    }
+  }
+  if (!isPlayDay(new Date())) return;
+  renderLive();
+}
+
+/* ===================== 通用抽屉 ===================== */
+function openSheet(mode){
+  document.getElementById('sheetTitle').textContent = mode === 'rules' ? '⚙️ 规则设置' : '💰 管理额外时间';
+  document.getElementById('sheetBody').innerHTML = mode === 'rules' ? rulesHtml() : bankHtml();
+  document.getElementById('sheetFoot').innerHTML = mode === 'rules'
+    ? '<button class="btn plain" id="btnReset">恢复默认</button><button class="btn primary" id="btnSave">保存并生效</button>'
+    : '<button class="btn primary" id="btnDone">完成</button>';
+  if (mode === 'rules') {
+    document.getElementById('btnReset').onclick = resetRules;
+    document.getElementById('btnSave').onclick  = saveRules;
+  } else {
+    document.getElementById('btnDone').onclick = closeSheet;
+    bindBank();
+  }
+  document.getElementById('sheetMask').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+}
+function closeSheet(){
+  document.getElementById('sheetMask').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+}
+
+function rulesHtml(){
+  var html = '';
+  RULE_FIELDS.forEach(function (f) {
+    if (f.grp) { html += '<div class="grp">' + f.grp + '</div>'; return; }
+    html += '<div class="fld"><span class="lb">' + f.lb + '</span>'
+          + '<span class="in"><input type="number" inputmode="numeric" min="0" max="600" step="1" '
+          + 'id="rf_' + f.k + '" value="' + S.rules[f.k] + '"><span class="u">' + f.u + '</span></span></div>';
+  });
+  html += '<div class="sheet-note">修改后点「保存并生效」，<b>今天会立刻按新规则计算</b>。'
+        + '<br>额外时间的增减不在这里，请到 ⚙️ →「💰 管理额外时间」。</div>';
+  return html;
+}
+function saveRules(){
+  var bad = [];
+  RULE_FIELDS.forEach(function (f) {
+    if (f.grp) return;
+    var v = parseInt(document.getElementById('rf_' + f.k).value, 10);
+    if (isNaN(v) || v < 0 || v > 600) { bad.push(f.lb); return; }
+    S.rules[f.k] = v;
+  });
+  if (bad.length) { toast('「' + bad.join('、') + '」填写有误，请填 0–600 的整数'); return; }
+  var d = todayRec();
+  if (d) { d.base = rule('baseMin'); d.hwBonus = rule('hwBonusMin'); }
+  save(); closeSheet(); render();
+  toast('规则已更新，今天已按新规则计算');
+}
+function resetRules(){
+  showModal({
+    emoji: '↩️', title: '恢复默认规则？',
+    text: '<p class="center">将恢复为：每天自动 60 分钟、作业完成 +90 分钟、违约次日 -30 分钟、三天全打卡奖励 60 分钟。<br>'
+        + '<span style="font-size:12.5px;color:#A79B8F">额外时间余额不受影响。</span></p>',
+    buttons: [
+      { t: '取消', c: 'plain' },
+      { t: '恢复默认', c: 'warm', fn: function () {
+          S.rules = {}; for (var k in DEFAULT_RULES) S.rules[k] = DEFAULT_RULES[k];
+          var d = todayRec();
+          if (d) { d.base = rule('baseMin'); d.hwBonus = rule('hwBonusMin'); }
+          save(); openSheet('rules'); render(); toast('已恢复默认规则');
+        } }
+    ]
+  });
+}
+
+function bankHtml(){
+  var eUsed = bankUsedTotalMs(), eLeft = bankRemainMs();
+  var html = '<div class="bank-hero">'
+    + '<div class="num">' + fmtMin(eLeft) + '</div>'
+    + '<div class="unit">分钟可用</div>'
+    + '<div class="meta">累计获得 ' + fmtMin(bankAddedMs()) + ' 分钟 · 累计已用 ' + fmtMin(eUsed) + ' 分钟</div>'
+    + '</div>'
+    + '<div class="quick">'
+    +   '<button class="btn" data-add="10">+10</button>'
+    +   '<button class="btn" data-add="30">+30</button>'
+    +   '<button class="btn" data-add="60">+60</button>'
+    +   '<button class="btn minus" data-add="-30">-30</button>'
+    + '</div>'
+    + '<div class="addrow">'
+    +   '<input type="number" inputmode="numeric" id="bankInput" placeholder="分钟数">'
+    +   '<button class="btn violet" id="bankAdd">添加</button>'
+    +   '<button class="btn plain" id="bankSub">扣除</button>'
+    + '</div>'
+    + '<div class="sheet-note">额外时间是<b>永久储存罐</b>：三天全打卡的奖励、家长奖励的时间都放这里，'
+    + '不会每天清零。今天的日常时长用完后，才会开始消耗它。</div>';
+
+  if (S.bank.log.length) {
+    html += '<div class="grp">最近记录</div>';
+    S.bank.log.slice(0, 8).forEach(function (it) {
+      html += '<div class="logrow"><span class="lt">' + stamp(it.t) + '</span>'
+            + '<span class="ln">' + it.note + '</span>'
+            + '<span class="lv ' + (it.min >= 0 ? 'p' : 'n') + '">'
+            + (it.min >= 0 ? '+' : '') + it.min + ' 分钟</span></div>';
+    });
+  }
+  return html;
+}
+function bindBank(){
+  var body = document.getElementById('sheetBody');
+  Array.prototype.forEach.call(body.querySelectorAll('[data-add]'), function (b) {
+    b.onclick = function () {
+      if (bankAdd(parseInt(b.dataset.add, 10), '家长调整')) { openSheet('bank'); render(); toast('额外时间已调整'); }
+    };
+  });
+  document.getElementById('bankAdd').onclick = function () {
+    var v = parseInt(document.getElementById('bankInput').value, 10);
+    if (bankAdd(v, '家长添加')) { openSheet('bank'); render(); toast('已添加 ' + v + ' 分钟'); }
+  };
+  document.getElementById('bankSub').onclick = function () {
+    var v = parseInt(document.getElementById('bankInput').value, 10);
+    if (isNaN(v)) { toast('请输入分钟数'); return; }
+    if (bankAdd(-Math.abs(v), '家长扣除')) { openSheet('bank'); render(); toast('已扣除 ' + Math.abs(v) + ' 分钟'); }
+  };
+}
+
+/* ===================== 安装到手机桌面 ===================== */
+var deferredPrompt = null;
+function isIOS(){
+  var ua = navigator.userAgent || '';
+  return /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1);
+}
+function showInstallGuide(){
+  var html = '', btns = [];
+  if (isIOS()) {
+    html = '<div class="steps"><b>🍎 苹果 iPhone / iPad</b><br>'
+         + '1. 请用 <b>Safari 浏览器</b>打开本页<br>'
+         + '2. 点屏幕底部中间的 <b>分享 ⬆️</b><br>'
+         + '3. 向下滑，找到「<b>添加到主屏幕</b>」<br>'
+         + '4. 点右上角「<b>添加</b>」</div>';
+  } else if (/Android/.test(navigator.userAgent || '')) {
+    html = '<div class="steps"><b>🤖 安卓手机</b><br>'
+         + '1. 用 <b>Chrome 浏览器</b>打开本页<br>'
+         + '2. 点右上角 <b>⋮</b> 菜单<br>'
+         + '3. 选「<b>安装应用</b>」或「<b>添加到主屏幕</b>」<br>'
+         + '4. 确认即可</div>'
+         + '<span class="tip">华为/小米/OPPO 等自带浏览器里，该选项常叫「<b>发送到桌面</b>」。</span>';
+  } else {
+    html = '<div class="steps"><b>💻 电脑浏览器</b><br>'
+         + '看地址栏右侧有没有 <b>⊕／安装</b> 图标，有就点一下即可安装为桌面应用。</div>';
+  }
+  html += '<span class="tip">微信 / QQ 内置浏览器不支持安装，请点右上角「⋯ → 用系统浏览器打开」。<br>'
+        + '💡 想要最完整的体验：把本文件夹的 4 个文件一起上传到任意免费静态托管，'
+        + '用 https 网址打开就能真正「安装」，完全离线可用。</span>';
+
+  if (deferredPrompt) {
+    btns.push({ t: '⚡ 一键安装', c: 'gogo', fn: function () {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function () { deferredPrompt = null; });
+    } });
+  }
+  btns.push({ t: '知道啦', c: 'warm' });
+  showModal({ emoji: '📱', title: '装到手机桌面', text: html, buttons: btns });
+}
+
+function drawIcon(size, maskable){
+  var c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  var x = c.getContext('2d'), u = size / 100, pd = maskable ? 14 : 0;
+  var g = x.createLinearGradient(0, 0, size, size);
+  g.addColorStop(0, '#FFDCA8'); g.addColorStop(1, '#FF9A4D');
+  x.fillStyle = g; x.fillRect(0, 0, size, size);
+  var cx = 50 * u, cy = 50 * u, r = (30 - pd * 0.28) * u;
+  x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fillStyle = '#fff'; x.fill();
+  x.fillStyle = '#FFC79A';
+  [[0, -r * 0.68], [r * 0.68, 0], [0, r * 0.68], [-r * 0.68, 0]].forEach(function (p) {
+    x.beginPath(); x.arc(cx + p[0], cy + p[1], r * 0.07, 0, Math.PI * 2); x.fill();
+  });
+  x.strokeStyle = '#FF8A3D'; x.lineWidth = r * 0.16; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx, cy - r * 0.7); x.stroke();
+  x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + r * 0.52, cy + r * 0.32); x.stroke();
+  x.beginPath(); x.arc(cx, cy, r * 0.13, 0, Math.PI * 2); x.fillStyle = '#FF7A3D'; x.fill();
+  return c.toDataURL('image/png');
+}
+function addLink(rel, href){
+  var l = document.createElement('link');
+  l.rel = rel; l.href = href;
+  document.head.appendChild(l);
+}
+function setupPWA(){
+  try {
+    var icons = null;
+    try {
+      icons = { i192: drawIcon(192, false), i512: drawIcon(512, false), i512m: drawIcon(512, true) };
+      addLink('apple-touch-icon', drawIcon(180, false));
+      addLink('icon', icons.i192);
+    } catch (e) { icons = null; }
+
+    var p = location.protocol;
+    if (p === 'http:' || p === 'https:') {
+      addLink('manifest', 'manifest.webmanifest');
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+      window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredPrompt = e; });
+    } else if (icons) {
+      var mf = {
+        name: '手机时间小管家', short_name: '时间管家',
+        description: '孩子手机游戏时长管理 · 三天打卡 · 额外时间奖励',
+        start_url: location.href.split('#')[0], scope: './',
+        display: 'standalone', orientation: 'portrait',
+        background_color: '#FFF8F0', theme_color: '#FFB877',
+        icons: [
+          { src: icons.i192, sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: icons.i512, sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: icons.i512m, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+        ]
+      };
+      try { addLink('manifest', URL.createObjectURL(new Blob([JSON.stringify(mf)], { type: 'application/manifest+json' }))); }
+      catch (e) {}
+    }
+  } catch (e) {}
+}
+
+/* ===================== 事件绑定 ===================== */
+document.getElementById('btnHw').onclick      = toggleHw;
+document.getElementById('btnCheckIn').onclick = checkIn;
+document.getElementById('btnViolate').onclick = violate;
+document.getElementById('btnStart').onclick   = startPlay;
+document.getElementById('btnPause').onclick   = function () { pausePlay(); toast('已暂停'); };
+document.getElementById('btnEnd').onclick     = endSession;
+
+document.getElementById('installTipX').onclick = function () {
+  S.tips.installTip = true; save();
+  document.getElementById('installTip').classList.add('hidden');
+};
+
+document.getElementById('sheetClose').onclick = closeSheet;
+document.getElementById('sheetMask').onclick  = closeSheet;
+
+document.getElementById('gearBtn').onclick = function () {
+  var btns = [
+    { t: '💰 管理额外时间', c: 'violet', fn: function () { setTimeout(function () { openSheet('bank'); }, 260); } },
+    { t: '🧮 修改规则', c: 'calm', fn: function () { setTimeout(function () { openSheet('rules'); }, 260); } },
+    { t: '📱 装到手机桌面', c: 'gogo', fn: function () { setTimeout(showInstallGuide, 260); } }
+  ];
+  var d = todayRec();
+  if (d) {
+    btns.push({ t: '重置今日计时', c: 'plain', fn: function () {
+        d.playMs = 0; d.sessionMs = 0; d.running = false; d.since = 0;
+        lastLeft = null; save(); render(); toast('今日已玩时长已归零');
+      } });
+  }
+  btns.push({ t: '清空全部数据', c: 'alert', fn: function () {
+      showModal({ emoji: '⚠️', title: '确认清空？',
+        text: '<p class="center">将删除本机保存的<b>所有</b>计时与打卡记录、<b>清空额外时间</b>，并恢复默认规则，且无法恢复。</p>',
+        buttons: [
+          { t: '取消', c: 'plain' },
+          { t: '确认清空', c: 'alert', fn: function () {
+              S = { v: 3, days: {}, weeks: {}, tips: S.tips, rules: {}, bank: { added: 0, log: [] }, penalty: null };
+              for (var k in DEFAULT_RULES) S.rules[k] = DEFAULT_RULES[k];
+              save(); lastLeft = null; render(); toast('数据已清空');
+            } }
+        ] });
+    } });
+  showModal({ emoji: '⚙️', title: '家长设置',
+    text: '<p class="center">额外时间剩余 <b>' + fmtMin(bankRemainMs()) + '</b> 分钟</p>',
+    buttons: btns.concat([{ t: '关闭', c: 'warm' }]) });
+};
+
+/* ===================== 启动 ===================== */
+render();
+setupPWA();
+tick();
+setInterval(tick, 250);
+setInterval(function () { renderWeek(); renderReward(); }, 30000);
+
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden) { render(); tick(); }
+});
+window.addEventListener('pageshow', function () { render(); tick(); });
+</script>
+</body>
+</html>
