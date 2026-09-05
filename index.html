@@ -67,6 +67,7 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 .digits.play{color:#FF5F6D}
 .digits.low{color:#FF9F43}
 .digits.over{color:#E23B3B}
+.digits.transition{color:#4A78D8}
 .sub-line{font-size:12.5px;color:#A2968A;margin-top:6px;min-height:18px}
 .sub-line.warn{color:#E23B3B;font-weight:600}
 .sub-line.info{color:#7C63C4;font-weight:600}
@@ -79,6 +80,7 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 .bar{height:10px;border-radius:6px;background:#F3EEE8;overflow:hidden;margin-top:7px}
 .bar > i{display:block;height:100%;border-radius:6px;width:0;transition:width .3s linear}
 .bar.daily > i{background:linear-gradient(90deg,#FFB36B,#FF6B6B)}
+.bar.transition > i{background:linear-gradient(90deg,#8FB8F5,#4A78D8)}
 .bar.extra > i{background:linear-gradient(90deg,#CDBCF5,#8B6BD9)}
 .bar-tail{display:flex;justify-content:space-between;font-size:11px;color:#B3A79A;margin-top:5px}
 
@@ -160,6 +162,10 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 .modal p b{color:#D9803A}
 .modal .steps{background:#FBF8F4;border-radius:14px;padding:12px 14px;margin-top:10px;font-size:13px}
 .modal .tip{font-size:11.5px;color:#A79B8F;display:block;margin-top:10px;line-height:1.7}
+.modal .pin{width:100%;height:54px;border:2px solid #EFE8E0;border-radius:14px;text-align:center;
+  font-size:22px;font-weight:800;color:#4C4238;letter-spacing:6px;outline:none;background:#FDFBF8;
+  font-variant-numeric:tabular-nums;margin-top:4px}
+.modal .pin:focus{border-color:#FFB877;background:#fff}
 .modal-btns{margin-top:20px;display:flex;gap:9px;flex-wrap:wrap}
 .modal-btns .btn{flex:1;min-width:100px;height:46px;font-size:15px}
 .btn.warm{background:linear-gradient(135deg,#FFC98A,#FFA85E);color:#fff;box-shadow:0 5px 14px rgba(255,168,94,.34)}
@@ -312,6 +318,16 @@ details.rules .body hr{border:none;border-top:1px dashed #EEE7DE;margin:10px 0}
       <div class="bar-tail"><span id="dailyLeft">每天自动 60 分钟</span><span id="dailyUsed">已用 0 分钟</span></div>
     </div>
 
+    <!-- 过渡时间：日常时长用完后的存放手机过渡 -->
+    <div class="quota">
+      <div class="quota-head">
+        <span class="dot" style="background:#4A78D8"></span>过渡时间（存放手机）
+        <span class="r" id="transitionRight">5 分钟</span>
+      </div>
+      <div class="bar transition"><i id="transitionBar"></i></div>
+      <div class="bar-tail"><span id="transitionLeft">日常时长用完时自动开始</span><span id="transitionUsed"></span></div>
+    </div>
+
     <!-- 额度二：额外时间 -->
     <div class="quota">
       <div class="quota-head">
@@ -413,7 +429,8 @@ var DEFAULT_RULES = {
   baseMin: 60,        // 每天自动时长（1 小时）
   hwBonusMin: 90,     // 作业完成增加的时长（1.5 小时）
   penaltyMin: 30,     // 违约后下一个玩日扣减（半小时）
-  weekRewardMin: 60   // 三天全打卡，额外时间奖励（1 小时）
+  weekRewardMin: 60,  // 三天全打卡，额外时间奖励（1 小时）
+  transitionMin: 5    // 日常时长用完后的「存放手机过渡时间」（分钟）
 };
 
 var RULE_FIELDS = [
@@ -422,6 +439,8 @@ var RULE_FIELDS = [
   { k: 'hwBonusMin',   lb: '作业完成增加', u: '分钟' },
   { grp: '违约惩罚' },
   { k: 'penaltyMin',   lb: '违约次日扣减', u: '分钟' },
+  { grp: '过渡时间' },
+  { k: 'transitionMin',lb: '存放手机过渡', u: '分钟' },
   { grp: '打卡奖励' },
   { k: 'weekRewardMin',lb: '三天全打卡奖励', u: '分钟（存入额外时间）' }
 ];
@@ -475,7 +494,7 @@ function stamp(ts){
 
 /* ===================== 数据存取 ===================== */
 function load(){
-  var data = { v: 3, days: {}, weeks: {}, rules: {}, tips: {}, bank: { added: 0, log: [] }, penalty: null };
+  var data = { v: 3, days: {}, weeks: {}, rules: {}, tips: {}, bank: { added: 0, log: [] }, penalty: null, pass: '' };
   var saved = null;
   try {
     var raw = localStorage.getItem(STORE_KEY);
@@ -488,6 +507,7 @@ function load(){
       data.bank = { added: saved.bank.added, log: saved.bank.log || [] };
     }
     if (saved.penalty) data.penalty = saved.penalty;
+    if (typeof saved.pass === 'string' && saved.pass) data.pass = saved.pass;
     // 旧版本（v<3）规则语义完全不同，打卡记录作废，仅保留额外时间与提示
     if (saved.v >= 3) {
       data.days  = saved.days  || {};
@@ -508,7 +528,9 @@ var S = load();
 
 function blankDay(k){
   return { date: k, base: 0, hwBonus: 0, hwDone: false, penaltyMin: 0,
-           playMs: 0, sessionMs: 0, running: false, since: 0, checked: null };
+           playMs: 0, sessionMs: 0, running: false, since: 0, checked: null,
+           phase: 0, transitionEndsAt: 0 };
+  /* phase: 0=日常时间还没用完；1=过渡中（存放手机倒计时）；2=已过渡完，用额外时间；3=全部用完 */
 }
 /* 取今天的可玩日记录（非可玩日返回 null） */
 function todayRec(){
@@ -559,6 +581,74 @@ function remainMs(d){
   return dailyLeftMs(d) + bankRawMs();
 }
 
+/* ===================== 过渡时间状态机 =====================
+   phase: 0=日常时间还没用完 → 1=过渡中（存放手机倒计时）→ 2=已过渡完用额外时间 → 3=全部用完
+   日常时间用完 → 震动 1 分钟 + 弹窗 + 过渡倒计时；过渡结束 → 开始用额外时间；额外时间用完 → 震动 1 分钟 + 弹窗
+   ==================================================== */
+function inTransition(d){ return d && d.phase === 1; }
+function transitionLeftMs(d){ return d && d.transitionEndsAt ? Math.max(0, d.transitionEndsAt - Date.now()) : 0; }
+function transitionTotalMs(){ return rule('transitionMin') * 60000; }
+
+function checkPhase(d){
+  if (!d) return false;
+  var changed = false;
+  var dl = dailyLeftMs(d);
+  var br = bankRawMs();
+
+  if (d.phase === 0 && dl <= 0) {
+    // 日常时间刚用完
+    if (d.running) { var el = Date.now() - d.since; d.playMs += el; d.sessionMs += el; d.running = false; d.since = 0; }
+    if (br > 0) {
+      d.phase = 1; d.transitionEndsAt = Date.now() + transitionTotalMs();
+      save(); changed = true;
+      vibrateFor(60000);
+      showModal({
+        emoji: '⏸', title: '今日日常时间用完啦',
+        text: '<p class="center">今天自动 + 作业的日常时长已经用完。<br>请先把<b>手机放下来</b>，过渡 <b>' + rule('transitionMin')
+            + ' 分钟</b>（这段时间不算游玩）。<br>过渡结束后，如果还想玩，会开始使用「额外时间」。</p>',
+        buttons: [{ t: '知道了', c: 'warm' }]
+      });
+    } else {
+      d.phase = 3; save(); changed = true;
+      vibrateFor(60000);
+      showModal({
+        emoji: '⛔', title: '今天的可用时间都用完啦',
+        text: '<p class="center">日常时长和额外时间都没有了。<br>请结束游玩，把手机交给爸爸妈妈～</p>',
+        buttons: [{ t: '知道了', c: 'warm' }]
+      });
+    }
+  } else if (d.phase === 1 && Date.now() >= d.transitionEndsAt) {
+    // 过渡结束
+    d.transitionEndsAt = 0;
+    if (br > 0) {
+      d.phase = 2; save(); changed = true;
+      showModal({
+        emoji: '✅', title: '过渡结束',
+        text: '<p class="center">过渡时间结束啦。<br>现在可以继续玩，将开始使用「额外时间」（剩余 <b>' + fmtMin(br) + ' 分钟</b>）。</p>',
+        buttons: [{ t: '好的', c: 'warm' }]
+      });
+    } else {
+      d.phase = 3; save(); changed = true;
+      vibrateFor(60000);
+      showModal({
+        emoji: '⛔', title: '额外时间也用完啦',
+        text: '<p class="center">额外时间已经用完。<br>请结束游玩，把手机交给爸爸妈妈～</p>',
+        buttons: [{ t: '知道了', c: 'warm' }]
+      });
+    }
+  } else if (d.phase === 2 && br <= 0) {
+    // 用额外时间过程中，额外时间用完
+    d.phase = 3; save(); changed = true;
+    vibrateFor(60000);
+    showModal({
+      emoji: '⛔', title: '额外时间用完啦',
+      text: '<p class="center">额外时间已经用完，今天不能再玩了。<br>请结束游玩，把手机交给爸爸妈妈～</p>',
+      buttons: [{ t: '知道了', c: 'warm' }]
+    });
+  }
+  return changed;
+}
+
 /* 三天（当前玩周期的五、六、日）打卡情况 */
 function threeDays(){
   var mon = currentPlayMon();
@@ -599,7 +689,7 @@ function showModal(opt){
   });
   document.getElementById('mask').classList.remove('hidden');
 }
-function hideModal(){ document.getElementById('mask').classList.add('hidden'); }
+function hideModal(){ document.getElementById('mask').classList.add('hidden'); stopVibrate(); }
 document.getElementById('mask').addEventListener('click', function (e) {
   if (e.target === this) hideModal();
 });
@@ -612,10 +702,79 @@ function toast(msg){
   toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2400);
 }
 
+/* ===================== 家长密码 ===================== */
+function hashPass(s){
+  var h = 5381;
+  for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return String(h);
+}
+function checkPass(v){
+  var stored = S.pass || hashPass('123456');   // 未设置时默认 123456
+  return hashPass(String(v)) === stored;
+}
+function requirePass(okFn, title){
+  var html = '<input type="password" inputmode="numeric" id="passInput" class="pin" '
+    + 'maxlength="8" placeholder="请输入家长密码" autocomplete="off">'
+    + '<span class="tip">' + (S.pass ? '' : '首次使用默认密码 <b>123456</b>，建议到 ⚙️ 里修改') + '</span>';
+  showModal({
+    emoji: '🔒', title: title || '家长密码验证',
+    text: html,
+    buttons: [
+      { t: '取消', c: 'plain' },
+      { t: '确认', c: 'warm', fn: function () {
+          var v = document.getElementById('passInput').value;
+          if (checkPass(v)) { okFn(); } else { toast('密码错误'); }
+        } }
+    ]
+  });
+}
+function changePass(){
+  requirePass(function () {
+    var html = '<input type="password" inputmode="numeric" id="newPass" class="pin" '
+      + 'maxlength="8" placeholder="输入新密码（4–8 位数字）" autocomplete="off">'
+      + '<input type="password" inputmode="numeric" id="newPass2" class="pin" '
+      + 'maxlength="8" placeholder="再输入一次" autocomplete="off">';
+    showModal({
+      emoji: '🔑', title: '设置新密码',
+      text: html,
+      buttons: [
+        { t: '取消', c: 'plain' },
+        { t: '保存', c: 'warm', fn: function () {
+            var a = document.getElementById('newPass').value;
+            var b = document.getElementById('newPass2').value;
+            if (!/^\d{4,8}$/.test(a)) { toast('密码需为 4–8 位数字'); return; }
+            if (a !== b) { toast('两次输入不一致'); return; }
+            S.pass = hashPass(a); save();
+            toast('家长密码已更新');
+          } }
+      ]
+    });
+  }, '验证旧密码');
+}
+
+/* ===================== 震动（1 分钟循环震动，弹窗关闭即停止） ===================== */
+var vibrateTimer = null;
+function stopVibrate(){
+  clearTimeout(vibrateTimer); vibrateTimer = null;
+  try { if (navigator.vibrate) navigator.vibrate(0); } catch (e) {}
+}
+function vibrateFor(ms){
+  if (!navigator.vibrate) return;
+  stopVibrate();
+  var stopAt = Date.now() + ms;
+  (function step(){
+    if (document.hidden) { stopVibrate(); return; }
+    if (Date.now() >= stopAt) { stopVibrate(); return; }
+    try { navigator.vibrate(1000); } catch (e) { return; }
+    vibrateTimer = setTimeout(step, 1100);
+  })();
+}
+
 /* ===================== 计时动作 ===================== */
 function startPlay(){
   var d = todayRec();
   if (!d) return;
+  if (inTransition(d)) { toast('正在过渡，请先存放手机'); return; }
   if (remainMs(d) <= 0) { toast('今天的可用时间已经用完啦'); return; }
   if (d.running) return;
   d.running = true; d.since = Date.now(); save(); render();
@@ -825,12 +984,18 @@ function renderRulesText(){
     + '· 孩子破坏约定（超时耍赖等）时，家长点「<b>⚠️ 记录违约</b>」<br>'
     + '· 违约后，<b>下一个可玩日</b>时长 <b>-' + r.penaltyMin + ' 分钟</b>；当天打卡记为 ✗，本周全勤奖励作废'
     + '<hr>'
-    + '<b>五、额外时间</b><br>'
+    + '<b>五、过渡时间（存放手机）</b><br>'
+    + '· 今天的<b>日常时长用完</b>时，手机会<b>震动提醒</b>，并进入 <b>' + r.transitionMin + ' 分钟</b>的「存放手机过渡时间」<br>'
+    + '· 过渡期间不能玩，先把手机放下来休息；这段过渡时间<b>不算游玩</b><br>'
+    + '· 过渡结束后如果还想玩，才开始使用「额外时间」；<b>额外时间用完也会震动提醒</b>'
+    + '<hr>'
+    + '<b>六、额外时间</b><br>'
     + '· 三天全打卡的奖励、家长手动添加的时间都存在这里<br>'
-    + '· <b>永久保存</b>，不会每天清零；今天的日常时长用完后才会开始消耗<br>'
+    + '· <b>永久保存</b>，不会每天清零；今天的日常时长用完并过渡结束后才会开始消耗<br>'
     + '· 在 ⚙️ →「💰 管理额外时间」里随时添加或扣除'
     + '<hr>'
-    + '<b>六、小贴士</b><br>'
+    + '<b>七、家长密码 &amp; 小贴士</b><br>'
+    + '· 管理额外时间、修改规则、重置计时、清空数据都需要<b>输入家长密码</b>（默认 123456，可在 ⚙️ 里改）<br>'
     + '· 数据保存在本机浏览器里，<b>刷新 / 关掉页面都不会丢</b>，无需登录和联网<br>'
     + '· 计时基于真实时间，<b>中途关掉页面也会继续计时</b>，防止偷跑<br>'
     + '· 想修改规则、管理额外时间或把本页装成 App，点右上角 <b>⚙️</b>';
@@ -845,15 +1010,31 @@ function renderLive(){
   var eTotal = bankAddedMs(), eUsed = bankUsedTotalMs(), eLeft = bankRemainMs();
   var fromExtra = bankUsedBy(d);
   var total = remainMs(d);
+  var inTrans = inTransition(d), transLeft = transitionLeftMs(d), transTotal = transitionTotalMs();
 
   var el = document.getElementById('playDigits');
-  el.textContent = fmtClock(total);
-  el.className = 'digits ' + (total < 0 ? 'over' : (total <= LOW_MS ? 'low' : 'play'));
+  if (inTrans) {
+    el.textContent = fmtClock(transLeft);
+    el.className = 'digits transition';
+  } else {
+    el.textContent = fmtClock(total);
+    el.className = 'digits ' + (total < 0 ? 'over' : (total <= LOW_MS ? 'low' : 'play'));
+  }
 
   document.getElementById('dailyBar').style.width = (daily > 0 ? Math.min(100, used / daily * 100) : 100) + '%';
   document.getElementById('dailyRight').textContent = '剩余 ' + fmtMin(dLeft) + ' / ' + dailyMin(d) + ' 分钟';
   document.getElementById('dailyLeft').textContent = '每天自动 ' + d.base + ' 分钟';
   document.getElementById('dailyUsed').textContent = '已用 ' + fmtMin(Math.min(used, daily)) + ' 分钟';
+
+  /* 过渡时间进度条 */
+  document.getElementById('transitionRight').textContent = inTrans ? '还剩 ' + fmtClock(transLeft) : (rule('transitionMin') + ' 分钟');
+  document.getElementById('transitionBar').style.width = inTrans
+    ? (transTotal > 0 ? Math.min(100, (transTotal - transLeft) / transTotal * 100) : 0) + '%'
+    : (d.phase >= 2 ? '100%' : '0%');
+  document.getElementById('transitionLeft').textContent = inTrans
+    ? '存放手机过渡中，请先别玩'
+    : (d.phase === 2 ? '过渡已完成，正在用额外时间' : (d.phase === 3 ? '今天时间已用完' : '日常时长用完时自动开始'));
+  document.getElementById('transitionUsed').textContent = inTrans ? ('过渡 ' + rule('transitionMin') + ' 分钟') : '';
 
   document.getElementById('extraBar').style.width = (eTotal > 0 ? Math.min(100, eUsed / eTotal * 100) : 0) + '%';
   document.getElementById('extraRight').textContent = '剩余 ' + fmtMin(eLeft) + ' / ' + fmtMin(eTotal) + ' 分钟';
@@ -862,7 +1043,10 @@ function renderLive(){
   document.getElementById('extraUsed').textContent = '累计已用 ' + fmtMin(eUsed) + ' 分钟';
 
   var sub = document.getElementById('playSub');
-  if (total < 0) {
+  if (inTrans) {
+    sub.className = 'sub-line info';
+    sub.textContent = '过渡中，请存放手机 ' + fmtClock(transLeft) + '，结束后可用额外时间';
+  } else if (total < 0) {
     sub.className = 'sub-line warn';
     sub.textContent = '⚠️ 已超时 ' + fmtClock(-total) + '，请结束游玩，家长可点「记录违约」';
   } else if (total <= 0) {
@@ -879,11 +1063,11 @@ function renderLive(){
   if (lastLeft !== null && lastLeft > 0 && total <= 0 && d.running) toast('今日时间已用完，请结束游玩');
   lastLeft = total;
 
-  document.getElementById('btnStart').disabled = d.running || remainMs(d) <= 0;
+  document.getElementById('btnStart').disabled = d.running || inTrans || remainMs(d) <= 0;
   document.getElementById('btnPause').disabled = !d.running;
   document.getElementById('btnEnd').disabled = false;
 
-  document.getElementById('statusLine').textContent = d.running ? '正在计时中…' : '已暂停';
+  document.getElementById('statusLine').textContent = inTrans ? '过渡中，请存放手机…' : (d.running ? '正在计时中…' : '已暂停');
 }
 
 function render(){
@@ -955,6 +1139,8 @@ function tick(){
     }
   }
   if (!isPlayDay(new Date())) return;
+  var d0 = todayRec();
+  if (checkPhase(d0)) render();
   renderLive();
 }
 
@@ -1009,8 +1195,8 @@ function saveRules(){
 function resetRules(){
   showModal({
     emoji: '↩️', title: '恢复默认规则？',
-    text: '<p class="center">将恢复为：每天自动 60 分钟、作业完成 +90 分钟、违约次日 -30 分钟、三天全打卡奖励 60 分钟。<br>'
-        + '<span style="font-size:12.5px;color:#A79B8F">额外时间余额不受影响。</span></p>',
+    text: '<p class="center">将恢复为：每天自动 60 分钟、作业完成 +90 分钟、违约次日 -30 分钟、过渡时间 5 分钟、三天全打卡奖励 60 分钟。<br>'
+        + '<span style="font-size:12.5px;color:#A79B8F">额外时间余额和家长密码不受影响。</span></p>',
     buttons: [
       { t: '取消', c: 'plain' },
       { t: '恢复默认', c: 'warm', fn: function () {
@@ -1230,28 +1416,34 @@ document.getElementById('gearBtn').onclick = function () {
   var btns = [
     { t: '📤 导出数据', c: 'plain', fn: exportData },
     { t: '📥 导入数据', c: 'plain', fn: importData },
-    { t: '💰 管理额外时间', c: 'violet', fn: function () { setTimeout(function () { openSheet('bank'); }, 260); } },
-    { t: '🧮 修改规则', c: 'calm', fn: function () { setTimeout(function () { openSheet('rules'); }, 260); } },
+    { t: '💰 管理额外时间', c: 'violet', fn: function () { requirePass(function () { setTimeout(function () { openSheet('bank'); }, 260); }); } },
+    { t: '🧮 修改规则', c: 'calm', fn: function () { requirePass(function () { setTimeout(function () { openSheet('rules'); }, 260); }); } },
+    { t: '🔒 修改家长密码', c: 'plain', fn: changePass },
     { t: '📱 装到手机桌面', c: 'gogo', fn: function () { setTimeout(showInstallGuide, 260); } }
   ];
   var d = todayRec();
   if (d) {
     btns.push({ t: '重置今日计时', c: 'plain', fn: function () {
-        d.playMs = 0; d.sessionMs = 0; d.running = false; d.since = 0;
-        lastLeft = null; save(); render(); toast('今日已玩时长已归零');
+        requirePass(function () {
+          d.playMs = 0; d.sessionMs = 0; d.running = false; d.since = 0;
+          d.phase = 0; d.transitionEndsAt = 0;
+          lastLeft = null; save(); render(); toast('今日已玩时长已归零');
+        });
       } });
   }
   btns.push({ t: '清空全部数据', c: 'alert', fn: function () {
-      showModal({ emoji: '⚠️', title: '确认清空？',
-        text: '<p class="center">将删除本机保存的<b>所有</b>计时与打卡记录、<b>清空额外时间</b>，并恢复默认规则，且无法恢复。</p>',
-        buttons: [
-          { t: '取消', c: 'plain' },
-          { t: '确认清空', c: 'alert', fn: function () {
-              S = { v: 3, days: {}, weeks: {}, tips: S.tips, rules: {}, bank: { added: 0, log: [] }, penalty: null };
-              for (var k in DEFAULT_RULES) S.rules[k] = DEFAULT_RULES[k];
-              save(); lastLeft = null; render(); toast('数据已清空');
-            } }
-        ] });
+      requirePass(function () {
+        showModal({ emoji: '⚠️', title: '确认清空？',
+          text: '<p class="center">将删除本机保存的<b>所有</b>计时与打卡记录、<b>清空额外时间</b>，并恢复默认规则，且无法恢复。<br><span style="font-size:12px;color:#A79B8F">家长密码会保留。</span></p>',
+          buttons: [
+            { t: '取消', c: 'plain' },
+            { t: '确认清空', c: 'alert', fn: function () {
+                S = { v: 3, days: {}, weeks: {}, tips: S.tips, rules: {}, bank: { added: 0, log: [] }, penalty: null, pass: S.pass };
+                for (var k in DEFAULT_RULES) S.rules[k] = DEFAULT_RULES[k];
+                save(); lastLeft = null; render(); toast('数据已清空');
+              } }
+          ] });
+      });
     } });
   showModal({ emoji: '⚙️', title: '家长设置',
     text: '<p class="center">额外时间剩余 <b>' + fmtMin(bankRemainMs()) + '</b> 分钟</p>',
